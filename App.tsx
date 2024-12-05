@@ -1,8 +1,7 @@
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import useWspClient from './src/hooks/useWspClient';
-import { SenderCargo, SenderPkg, simpleMessage } from './src/ws-bot/bot';
-import { WebSocket, Event } from 'ws';
+import { rawToData, SenderCargo, SenderPkg, simpleMessage } from './src/ws-bot/bot';
 
 interface FormInput {
   username: string,
@@ -12,6 +11,7 @@ interface FormInput {
 //TRY TO MAKE THE APP FUNCTION TO SHOW CONTENT FROM A TEXT FILE AT THE SERVER
 
 export default function App() {
+  
   const [ clientName, setClientName ] = useState("")
   const [ lastMessage, setLastMessage ] = useState<simpleMessage>({
     from: "",
@@ -20,11 +20,9 @@ export default function App() {
   const [ pairingCode, setPairingCode ] = useState("")
   const [ status, setStatus ] = useState("")
   const [ phoneNumber, setPhoneNumber ] = useState<undefined|string>()
-
   
-  const socket = new WebSocket("ws://localhost:8080");
-  const session = useWspClient(socket, clientName, phoneNumber);
-
+  const session = useWspClient(clientName, phoneNumber);
+    
   useEffect(() => {
     const { isFetched, clientData } = session;
     const { STATE, PAIRING_CODE, MESSAGE } = SenderCargo
@@ -37,18 +35,19 @@ export default function App() {
         }
       } break;
       case PAIRING_CODE: {
+        console.log(clientData)
         if (typeof clientData.package === "string") {
           setPairingCode(clientData.package)
         }
-      }
+      } break;
       case MESSAGE: {
         if (typeof clientData.package !== "string") {
           setLastMessage(clientData.package as simpleMessage)
         }
-      }
+      } break;
     }
   }, [session])
-
+  
   return (
     <View style={styles.container}>
       <Form isFetched={session.isFetched} onSubmit={(data: FormInput) => {
@@ -56,7 +55,7 @@ export default function App() {
         setPhoneNumber(data.phoneNumber)
       }}/>
       <Text style={styles.status}>{status}</Text>
-      <Text>{ 
+      <Text selectable={true}>{ 
       lastMessage.from ? 
       `Last message (${lastMessage.from}): ${lastMessage.body}` :
       `Your Pairing Code Is: ${pairingCode}` 
@@ -68,6 +67,7 @@ export default function App() {
 function Form ({ onSubmit, isFetched }: { onSubmit: (data: FormInput) => void, isFetched: boolean }) {
   const [ username, setUsername ] = useState("")
   const [ phoneNumber, setPhoneNumber ] = useState("")
+
   return (
     <>
       <Text>Pon tu nombre de usuario aquí</Text>
@@ -84,8 +84,6 @@ function Form ({ onSubmit, isFetched }: { onSubmit: (data: FormInput) => void, i
           username,
           phoneNumber
         })
-        setUsername("")
-        setPhoneNumber("")
       }}/>
     </>
   )

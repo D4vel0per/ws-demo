@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { WebSocket } from "ws";
+import { useState, useEffect, useRef } from "react";
 
 import { 
     dataToRaw, 
@@ -9,26 +8,39 @@ import {
     SenderPkg 
 } from "../ws-bot/bot";
 
-export default function useWspClient (socket: WebSocket, username: string, phoneNumber?:string) {
+export default function useWspClient (username: string, phoneNumber?:string) {
     const [ isFetched, setIsFetched ] = useState(false);
     const [ clientData, setClientData ] = useState<SenderInfo<SenderPkg>>({
         package: "Connecting to the socket...",
         cargo: SenderCargo.STATE
     })
-
+    
+    const socket = useRef(new WebSocket("ws://192.168.0.109:8000")).current
+    
     useEffect(() => {
         socket.onopen =  () => {
+            setClientData({
+                package: "Connected",
+                cargo: SenderCargo.STATE
+            })
             console.log("Successfully connected to the websocket")
         }
-        socket.on("message", rawData => {
-            let data = rawToData(rawData);
-            if (data) {
-                setClientData(data)
+        socket.onmessage = (msj) => {
+            try {
+                let rawData:string = msj.data;
+                let data = rawToData(rawData);
+                console.log(data)
+                if (data) {
+                    setClientData(data)
+                }
+                setIsFetched(!!data)
+            } catch (error) {
+                console.log("ERROR:", error)
+                setIsFetched(false)
             }
-            setIsFetched(!!data)
-        })
+        }
     }, [])
-
+    
     useEffect(() => {
         if (username) {
             let raw = dataToRaw(username, phoneNumber)
@@ -38,7 +50,7 @@ export default function useWspClient (socket: WebSocket, username: string, phone
             console.log("You didn't provide a username.");
         }
     }, [username, phoneNumber])
-
+    
     return {
         isFetched,
         clientData

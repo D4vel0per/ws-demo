@@ -32,7 +32,7 @@ interface SenderResponse {
     status: "SUCCESS"|"FAILED"
 }
 
-function rawToData (data: RawData) {
+function rawToData (data: RawData|string) {
     const info: SenderResponse = JSON.parse(data.toString());
     const { STATE, PAIRING_CODE, MESSAGE } = SenderCargo;
 
