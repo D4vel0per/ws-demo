@@ -1,53 +1,53 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
-import useWspClient from './hooks/useWspClient';
-import { Client, Message } from 'whatsapp-web.js';
-import { SenderCargo, SenderPkg } from './ws-bot/bot';
+import useWspClient from './src/hooks/useWspClient';
+import { SenderCargo, SenderPkg, simpleMessage } from './src/ws-bot/bot';
+import { WebSocket, Event } from 'ws';
 
 interface FormInput {
   username: string,
   phoneNumber: string
 }
 
+//TRY TO MAKE THE APP FUNCTION TO SHOW CONTENT FROM A TEXT FILE AT THE SERVER
+
 export default function App() {
   const [ clientName, setClientName ] = useState("")
-  const [ lastMessage, setLastMessage ] = useState({
+  const [ lastMessage, setLastMessage ] = useState<simpleMessage>({
     from: "",
-    content: ""
+    body: ""
   })
   const [ pairingCode, setPairingCode ] = useState("")
   const [ status, setStatus ] = useState("")
   const [ phoneNumber, setPhoneNumber ] = useState<undefined|string>()
 
-  const sender = (client: Client, cargo: SenderCargo, pkg: SenderPkg) => {
-    let { MESSAGE, PAIRING_CODE, STATE } = SenderCargo
-    switch (cargo) {
-      case MESSAGE: {
-        if (typeof pkg !== "string") {
-          setLastMessage({
-            from: pkg.from,
-            content: pkg.body
-          })
-          client.sendMessage(pkg.from, "Message Received! :D (sorry I have absolutely nothing to say yet)")
-          .then(msj => {
-            console.log(`We sended this message to ${msj.to}: '${msj.body}'`)
-          })
+  
+  const socket = new WebSocket("ws://localhost:8080");
+  const session = useWspClient(socket, clientName, phoneNumber);
+
+  useEffect(() => {
+    const { isFetched, clientData } = session;
+    const { STATE, PAIRING_CODE, MESSAGE } = SenderCargo
+    if (!isFetched) return;
+
+    switch(clientData.cargo) {
+      case STATE: {
+        if (typeof clientData.package === "string") {
+          setStatus(clientData.package)
         }
       } break;
       case PAIRING_CODE: {
-        if (typeof pkg === "string") {
-          setPairingCode(pkg)
+        if (typeof clientData.package === "string") {
+          setPairingCode(clientData.package)
         }
-      } break;
-      case STATE: {
-        if (typeof pkg === "string") {
-          setStatus(pkg)
-        } break;
+      }
+      case MESSAGE: {
+        if (typeof clientData.package !== "string") {
+          setLastMessage(clientData.package as simpleMessage)
+        }
       }
     }
-  }
-
-  const session = useWspClient(clientName, sender, phoneNumber)
+  }, [session])
 
   return (
     <View style={styles.container}>
@@ -58,7 +58,7 @@ export default function App() {
       <Text style={styles.status}>{status}</Text>
       <Text>{ 
       lastMessage.from ? 
-      `Last message (${lastMessage.from}): ${lastMessage.content}` :
+      `Last message (${lastMessage.from}): ${lastMessage.body}` :
       `Your Pairing Code Is: ${pairingCode}` 
       }</Text>
     </View>

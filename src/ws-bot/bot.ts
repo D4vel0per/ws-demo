@@ -46,10 +46,22 @@ async function createClient (clientId: string, phoneNumber: string, sender: expo
 enum SenderCargo {
     STATE = "State",
     PAIRING_CODE = "PCode",
-    MESSAGE = "Message"
+    MESSAGE = "Message",
+    FORM = "Form"
 }
 
-type SenderPkg = string|Message
+type simpleMessage = {
+    from: string,
+    body: string,
+    timestamp?: number
+}
+
+type formInfo = {
+    clientId: string,
+    phoneNumber?: string
+}
+
+type SenderPkg = string|simpleMessage|formInfo
 
 type expoSender = (client:Client, cargo: SenderCargo, pkg: SenderPkg) => any
 
@@ -131,6 +143,8 @@ export {
     expoSender,
     SenderCargo,
     SenderPkg,
+    formInfo,
+    simpleMessage,
     getClient,
     createClient,
     initClient
