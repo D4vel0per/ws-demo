@@ -1,58 +1,31 @@
 import { RawData } from "ws"
-
-enum SenderCargo {
-    STATE = "State",
-    PAIRING_CODE = "PCode",
-    MESSAGE = "Message",
-    FORM = "Form"
-}
-
-type simpleMessage = {
-    from: string,
-    body: string,
-    timestamp?: number
-}
-
-type formInfo = {
-    clientId: string,
-    phoneNumber?: string
-}
-
-type SenderPkg = string|simpleMessage|formInfo
-
-interface SenderInfo<SenderPkg> {
-    cargo: SenderCargo,
-    package: SenderPkg
-}
-
-interface SenderResponse {
-    type: SenderCargo,
-    data: string,
-    from: string,
-    status: "SUCCESS"|"FAILED"
-}
+import { SenderResponse, SenderCargo, SenderInfo, SenderPkg, simpleMessage, formInfo, BasicStatus } from "./types";
 
 function rawToData (data: RawData|string) {
     const info: SenderResponse = JSON.parse(data.toString());
     const { STATE, PAIRING_CODE, MESSAGE } = SenderCargo;
 
-    if (info.status === "SUCCESS") {
-        let result: SenderInfo<SenderPkg> = {
+    if (info.status === BasicStatus.SUCCESS) {
+        let result: SenderInfo = {
             cargo: info.type,
             package: info.data
         }
         switch (info.type) {
             case PAIRING_CODE:
-            case STATE: return result as SenderInfo<string>
-            case MESSAGE: return result as SenderInfo<simpleMessage>
+            case STATE: return result as SenderInfo
+            case MESSAGE: {
+                result.package = JSON.parse(info.data);
+                return result as SenderInfo
+            }
+            default: return info.status;
         }
     }
 
-    return null
+    return info.status
 }
 
 function dataToRaw (clientId:string, phoneNumber?:string): string {
-    let info: SenderInfo<formInfo> = {
+    let info: SenderInfo = {
         cargo: SenderCargo.FORM,
         package: {
             clientId, phoneNumber

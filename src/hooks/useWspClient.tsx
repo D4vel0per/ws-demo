@@ -4,18 +4,18 @@ import {
     dataToRaw, 
     rawToData, 
     SenderCargo, 
-    SenderInfo, 
-    SenderPkg 
+    SenderInfo
 } from "../ws-bot/bot";
+import { BasicStatus, useWspSession } from "../ws-bot/types";
 
-export default function useWspClient (username: string, phoneNumber?:string) {
+export default function useWspClient (username: string, phoneNumber?:string): useWspSession {
     const [ isFetched, setIsFetched ] = useState(false);
-    const [ clientData, setClientData ] = useState<SenderInfo<SenderPkg>>({
+    const [ clientData, setClientData ] = useState<SenderInfo>({
         package: "Connecting to the socket...",
         cargo: SenderCargo.STATE
     })
     
-    const socket = useRef(new WebSocket("ws://192.168.0.109:8000")).current
+    const socket = useRef(new WebSocket("ws://192.168.0.106:8000")).current
     
     useEffect(() => {
         socket.onopen =  () => {
@@ -30,10 +30,20 @@ export default function useWspClient (username: string, phoneNumber?:string) {
                 let rawData:string = msj.data;
                 let data = rawToData(rawData);
                 console.log(data)
-                if (data) {
+                if (typeof data !== "string") {
                     setClientData(data)
+                    setIsFetched(true)
+                } else {
+                    if (data === BasicStatus.FAILED) {
+                        setClientData({
+                            package: "Couldn't find your session, you must create a new one.",
+                            cargo: SenderCargo.STATE
+                        })
+                    }
+                    
+                    setIsFetched(data === BasicStatus.SUCCESS)
                 }
-                setIsFetched(!!data)
+                
             } catch (error) {
                 console.log("ERROR:", error)
                 setIsFetched(false)
