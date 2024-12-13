@@ -8,6 +8,8 @@ import {
 } from "../ws-bot/bot";
 import { BasicStatus, useWspSession } from "../ws-bot/types";
 
+const IP_ADDRESS = "192.168.0.106" // PON TU IP AQUÍ
+
 export default function useWspClient (username: string, phoneNumber?:string): useWspSession {
     const [ isFetched, setIsFetched ] = useState(false);
     const [ clientData, setClientData ] = useState<SenderInfo>({
@@ -15,7 +17,7 @@ export default function useWspClient (username: string, phoneNumber?:string): us
         cargo: SenderCargo.STATE
     })
     
-    const socket = useRef(new WebSocket("ws://192.168.0.106:8000")).current
+    const socket = useRef(new WebSocket(`ws://${IP_ADDRESS}:8000`)).current
     
     useEffect(() => {
         socket.onopen =  () => {
